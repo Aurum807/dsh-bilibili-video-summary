@@ -68,6 +68,19 @@ VIDEOSUM_FFMPEG=D:\path\to\ffmpeg.exe
 VIDEOSUM_FFPROBE=D:\path\to\ffprobe.exe
 ```
 
+### 只有 yt_dlp 模块、没有 yt-dlp 可执行文件
+
+如果 yt-dlp 是作为一个 Python 包放在某个目录里（而不是装在解释器的 site-packages），
+把它所在目录加进来，插件就会用 `python -m yt_dlp` 调用：
+
+```bash
+VIDEOSUM_PYLIBS=D:\path\to\dir-containing-yt_dlp
+```
+
+这一点特别值得留意：**文件存在不等于能用**。`yt_dlp` 目录躺在那里但不在
+`PYTHONPATH` 里时，`import yt_dlp` 会报 `No module named yt_dlp`。所以插件对每个候选
+都真的跑一次 `--version` 验证，`doctor` 报出来的版本号就是实测结果。
+
 ## 用法
 
 大多数时候不用管——贴链接就行。也可以显式用它：
@@ -117,6 +130,23 @@ VIDEOSUM_FFPROBE=D:\path\to\ffprobe.exe
 4. **静止文档类视频以画面文字为准**，实拍类视频以讲述为准、画面用来确认型号与数据。
 5. **不添加视频里没有的信息**，争议内容标明是作者观点；对线类视频说明这是单方面说法。
 
+## 常见故障
+
+| 现象 | 原因 | 处理 |
+| --- | --- | --- |
+| `No module named yt_dlp` | yt-dlp 以 Python 模块形式存在，但不在 `PYTHONPATH` 里 | 设 `VIDEOSUM_PYLIBS` 指向含 `yt_dlp` 的目录 |
+| `HTTP Error 412` | 没有 cookies，B 站拒绝 | 放好 `cookies/bilibili.txt` |
+| `HTTP Error 567 Unknown Status` | 媒体下载走了**连不上 B 站 CDN 的本地代理** | 见下 |
+| `PermissionError` 指向 cookie 文件 | cookie 文件在只读位置，yt-dlp 退出时回写失败 | 插件已自动复制到可写位置；若仍出现，把 cookie 放到可写目录 |
+
+`567` 这个坑最值得说，因为它的报错完全看不出原因。yt-dlp 会读系统代理设置，
+如果本机有个代理（例如 `127.0.0.1:7890`）而它连不通 B 站 CDN，每一个媒体分片
+都会被判成 `567`；此时 `--simulate` 解析直链是**正常**的，只有真正传数据才失败，
+所以很容易误判成限流或权限问题。
+
+插件对 B 站域名自动追加 `NO_PROXY`（`bilibili.com`、`bilivideo.com`、`hdslb.com`、`b23.tv`），
+其他站点仍走你原有的代理设置。如果你手动调 yt-dlp 也遇到，加 `--proxy ""` 即可。
+
 ## 已知限制
 
 - B 站高画质与部分字幕需要登录。插件会自动读取工作区 `cookies/bilibili.txt`（Netscape 格式）
@@ -125,6 +155,8 @@ VIDEOSUM_FFPROBE=D:\path\to\ffprobe.exe
 - 只对**用户消息里只有链接**的情况自动触发。如果同时贴了多条链接，只会总结第一条——
   想让插件逐条处理，直说即可。
 - 抽帧是等间隔的，不是「智能选帧」。全屏 PPT 或长时间静止画面会有大量重复帧。
+- 索引文件（`frames_index.txt`、`sheets_index.txt`）的表头是 **ASCII**，这是刻意的：
+  按 GBK 解码中文会把表头变成乱码，而这些索引正是用来看时间点的。
 
 ## 开源协议
 
