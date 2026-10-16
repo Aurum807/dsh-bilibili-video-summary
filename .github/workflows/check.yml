@@ -1,0 +1,52 @@
+name: check
+
+# 每次推送、每个 PR 都跑。
+# 本插件零运行时依赖（官方 @deepseek-ai/* 是 peerDependencies，由宿主提供），
+# 所以这里不需要 npm ci，全部检查都是离线静态检查。
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: 检查 (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # package.json 里的 scripts.check：对两个源文件做 node --check
+      - name: 语法检查
+        run: npm run check
+
+      # 插件目录 / npm 上架所依赖的清单字段
+      - name: 清单元数据检查
+        run: node scripts/check-manifest.mjs
+
+      # 入口导出、import 与 peerDependencies 是否一致、patch 挂载名
+      - name: 入口检查
+        run: node scripts/check-entry.mjs
+
+      # 确认发布出去的内容不含 cookie 等敏感文件
+      - name: 打包内容检查
+        run: |
+          npm pack --dry-run --json --registry=https://registry.npmjs.org > pack.json
+          node -e "
+          const raw = require('fs').readFileSync('pack.json','utf8').replace(/^\uFEFF/, '');
+          const files = JSON.parse(raw)[0].files.map(f => f.path);
+          const bad = files.filter(f => /cookie|\.env|secret|token/i.test(f));
+          if (bad.length) {
+            console.error('打包内容里出现疑似敏感文件：' + bad.join(', '));
+            process.exit(1);
+          }
+          console.log('打包内容检查通过，共 ' + files.length + ' 个文件：');
+          for (const f of files) console.log('  ' + f);
+          "
