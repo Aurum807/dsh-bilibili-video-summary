@@ -1,0 +1,9 @@
+# 依赖与素材
+node_modules/
+vidsum_out/
+*.log
+
+# 凭据：绝对不要提交
+cookies/
+*.cookies.txt
+cookies.txt

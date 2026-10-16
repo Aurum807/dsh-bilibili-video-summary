@@ -1,0 +1,14 @@
+# ============================================================================
+# dsh-bilibili-video-summary —— DSH bundle patch
+# ============================================================================
+# 这是插件的「挂载声明」。DSH 启动时按 bundle 层栈叠加各插件 patch，
+# 本文件把视频总结插件插入 Web profile 的配置树。
+#
+# 安装方式：
+#   dsh plugin --profile web add dsh-bilibili-video-summary        # 来自 npm
+#   dsh plugin --profile web add link:<本目录绝对路径>              # 本地开发
+# ============================================================================
+
+- insert:
+    - id: dsh-bilibili-video-summary
+      name: dsh-bilibili-video-summary

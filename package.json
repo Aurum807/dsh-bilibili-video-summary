@@ -1,0 +1,42 @@
+{
+  "name": "dsh-bilibili-video-summary",
+  "version": "0.1.0",
+  "description": "DSH 插件：发 B 站（或任意 yt-dlp 支持的站点）视频链接时自动准备可总结素材（转写 + 关键帧接触印相纸），并按方法论产出总结",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "bilibili",
+    "video",
+    "summary",
+    "transcript"
+  ],
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "skills",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node --check lib/index.js && node --check lib/video-material.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/dsh-agent": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-skill": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2"
+  },
+  "license": "MIT"
+}
