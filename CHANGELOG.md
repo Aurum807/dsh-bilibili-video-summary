@@ -7,6 +7,38 @@
 
 ## [未发布]
 
+## [0.2.1] - 2026-10-19
+
+### 修复
+
+- **README 的转写说明和实现对不上**：原文写「ASR 不内置，只能靠 `VIDEOSUM_ASR_CMD` 自己配」，
+  但 0.2.0 起已经会自动探测本机 faster-whisper，照原文读会以为必须手动配置。
+  改为三级回退的真实描述：站方字幕 → 本机 faster-whisper → 自定义命令。
+- 删掉一个并不存在的模块示例 `python -m faster_whisper_cli`，换成插件自带脚本的真实参数。
+- `外部依赖` 表补上可选的 faster-whisper 一行，并说明缺了它会退回到「只有画面」。
+
+### 变更
+
+- `.gitignore` 增加 `__pycache__/`、`*.pyc`：在仓库里跑过一次
+  `lib/asr/faster_whisper_asr.py` 就会生成 `lib/asr/__pycache__/`，
+  而 `files` 里包含 `lib`，不排除会被一起发布。
+
+## [0.2.0] - 2026-10-19
+
+### 新增
+
+- **自动探测本机 faster-whisper 做转写**：不用再自己拼 `VIDEOSUM_ASR_CMD`。
+  装了 `pip install faster-whisper` 就能直接跑，插件会同时找到解释器与模型缓存目录
+  （`HF_HOME`），默认 `small` 模型、CPU、`int8`，复用已下载的模型不重复下载。
+- 新增 `lib/asr/faster_whisper_asr.py`：零依赖的调用脚本，输出 `[起-止] 文本` 行，
+  参数 `--audio --out --model --lang --beam-size`。
+
+### 变更
+
+- 转写引擎改为三级回退：站方字幕 → 本机 faster-whisper → `VIDEOSUM_ASR_CMD`。
+  三者都没有时仍产出画面素材，只是缺少逐字内容。
+- `doctor` 输出新增 `asr` 字段，直接显示命中的是哪一级，例如 `faster-whisper/python.EXE`。
+
 ## [0.1.0] - 2026-10-16
 
 首次发布。

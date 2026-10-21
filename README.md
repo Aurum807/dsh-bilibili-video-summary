@@ -29,7 +29,7 @@
 需要先有 DSH。本插件按 DSH bundle 规范打包，装完即用：
 
 ```bash
-# 从 npm 安装（发布后）
+# 从 npm 安装
 dsh plugin --profile web add dsh-bilibili-video-summary
 
 # 本地开发：直接指向本目录
@@ -40,24 +40,30 @@ dsh plugin --profile web add link:/绝对路径/dsh-bilibili-video-summary
 
 ## 外部依赖
 
-视频下载和转码依赖两个命令行工具，**插件会自己找，找不到时会给出安装提示**：
+视频下载和转码依赖两个命令行工具，语音转写可选装一个 Python 包——**插件会自己找，找不到时会给出安装提示**：
 
 | 依赖 | 用途 | 缺失影响 |
 | --- | --- | --- |
 | [yt-dlp](https://github.com/yt-dlp/yt-dlp) | 下载视频/音频、抓站方字幕 | 完全不可用 |
 | [ffmpeg](https://ffmpeg.org/)（含 ffprobe） | 抽帧、分离音轨 | 只能拿转写稿，没有画面 |
+| [faster-whisper](https://github.com/SYSTRAN/faster-whisper)（可选） | 没有站方字幕时做语音转写 | 退回到「只有画面素材」 |
 
-语音识别（ASR）**不内置**，因为它的体积和平台差异都太大。两种选择：
+转写引擎按三级回退自动找，**默认不需要你配置**：
 
-- **不配置**：插件会先尝试站方字幕。B 站很多 UP 主会上传字幕，够用；没有字幕时就只有画面素材，
-  总结会缺少逐字内容。此时插件仍可用，只是能力受限。
-- **配置一个**：设置环境变量 `VIDEOSUM_ASR_CMD` 指向任何「音频 → 带时间戳文本」的命令，
-  `{audio}` 会被替换成音频文件路径、`{out}` 替换成输出 txt 路径。例如：
+1. **站方字幕** —— UP 主自己上传的字幕，最准也最快，有就直接用。
+2. **本机 faster-whisper** —— 装了 `pip install faster-whisper` 就自动探测（连同模型缓存目录一起找），
+   默认 `small` 模型、CPU、`int8`。20 分钟视频大约 2 分钟出稿。
+3. **自定义命令** —— 设环境变量 `VIDEOSUM_ASR_CMD` 指向任何「音频 → 带时间戳文本」的命令，
+   `{audio}` 替换成音频文件路径、`{out}` 替换成输出 txt 路径。适合已经装了别的引擎的人。
+   插件自带一份调用脚本，可以照它的参数写：
 
-  ```bash
-  # faster-whisper（需要 pip install faster-whisper）
-  VIDEOSUM_ASR_CMD=python -m faster_whisper_cli {audio} --out {out} --language zh
-  ```
+   ```bash
+   # 例：用自带脚本换更大的模型（参数：--audio --out --model --lang --beam-size）
+   VIDEOSUM_ASR_CMD=python <插件目录>/lib/asr/faster_whisper_asr.py --audio {audio} --out {out} --model medium
+   ```
+
+三者都没有时，插件仍会产出全部画面素材，只是缺少逐字内容——总结照做，细节靠画面核对。
+`node lib/video-material.mjs doctor` 会显示当前实际命中的是哪一级。
 
 在 Windows 上，DSH 里跑的命令可能拿不到你交互式 shell 的 PATH。若插件报找不到工具，
 用环境变量显式指定即可：
@@ -90,7 +96,7 @@ VIDEOSUM_PYLIBS=D:\path\to\dir-containing-yt_dlp
 - **命令行**（不经过模型，手动跑素材流水线）：
 
   ```bash
-  node lib/video-material.mjs doctor              # 检查 yt-dlp / ffmpeg / ASR 是否就绪
+  node lib/video-material.mjs doctor              # 检查 yt-dlp / ffmpeg / 转写引擎是否就绪（会显示命中哪一级）
   node lib/video-material.mjs probe    --url <URL>
   node lib/video-material.mjs material --url <URL> --every 3
   ```

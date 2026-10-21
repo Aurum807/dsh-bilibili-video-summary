@@ -1,6 +1,6 @@
 {
   "name": "dsh-bilibili-video-summary",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "DSH 插件：发 B 站（或任意 yt-dlp 支持的站点）视频链接时自动准备可总结素材（转写 + 关键帧接触印相纸），并按方法论产出总结",
   "keywords": [
     "dsh",

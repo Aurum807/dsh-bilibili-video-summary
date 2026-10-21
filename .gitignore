@@ -7,3 +7,8 @@ vidsum_out/
 cookies/
 *.cookies.txt
 cookies.txt
+
+# Python 缓存：跑过 lib/asr/faster_whisper_asr.py 会生成，
+# 而 package.json 的 files 含 lib，不排除就会被一起发到 npm
+__pycache__/
+*.pyc
