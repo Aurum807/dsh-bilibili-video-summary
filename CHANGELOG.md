@@ -7,6 +7,23 @@
 
 ## [未发布]
 
+## [0.3.3] - 2026-11-03
+
+### 修复
+
+- **技能出现在目录里，但一加载就报错**：`ctx.skills.register({...})` 少了 `source` 字段，
+  调用技能时报 `loaded skill "bilibili-video-summary" source must be a string`。
+  原因是两道校验不一致——`register()` 里的 `validateRuntimeSkill` 只查
+  `name`/`description`/`invocation`，所以注册能过、目录里看得见；真正加载正文时走
+  `validateDefinition`，那里要求 `source`、`provider`、`content` 都是字符串。
+  现在补上 `source: \`plugin:${name}\``。
+  这类半坏状态最难查：功能列表里有，点进去才炸。
+
+### 新增
+
+- `scripts/check-entry.mjs` 增加第 6 条静态检查：出现 `skills.register({…})` 时，
+  花括号配平取出该对象，缺 `source` 即失败。
+
 ## [0.3.2] - 2026-11-03
 
 > `0.3.1` 曾经暂存到 npm 的 staging 区，但因为下面第二个错误没改透，**从未正式发布**

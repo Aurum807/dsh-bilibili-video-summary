@@ -153,6 +153,43 @@ for (const file of sourceFiles) {
   });
 }
 
+// ---- 6. ctx.skills.register({...}) 必须带 source ----
+// skills.register() 的运行时校验只查 name/description/invocation，所以缺 source 也能注册成功、
+// 技能甚至出现在目录里；但真正加载正文时走 validateDefinition，会抛
+// `loaded skill "x" source must be a string`。这种「目录里有、点进去就报错」的半坏状态很难查。
+for (const file of sourceFiles) {
+  const raw = await readFile(path.join(root, "lib", file), "utf8");
+  // 把注释抹成空格（保留换行与长度，行号不变），避免注释里的示例被当成真实调用。
+  const text = raw
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/\/\/[^\n]*/g, (m) => m.replace(/[^\n]/g, " "));
+  let from = 0;
+  for (;;) {
+    const idx = text.indexOf("skills.register({", from);
+    if (idx < 0) break;
+    from = idx + 1;
+    const start = text.indexOf("{", idx);
+    let depth = 0;
+    let end = -1;
+    for (let i = start; i < text.length; i += 1) {
+      const ch = text[i];
+      if (ch === "{") depth += 1;
+      else if (ch === "}") {
+        depth -= 1;
+        if (depth === 0) { end = i; break; }
+      }
+    }
+    if (end <= start) continue;
+    if (!/\bsource\s*:/.test(text.slice(start, end + 1))) {
+      const line = text.slice(0, start).split(/\r?\n/).length;
+      problems.push(
+        `lib/${file}:${line} 的 skills.register({…}) 没有 source 字段 ` +
+        `—— 技能能注册成功、也会出现在目录里，但加载正文时会抛 source must be a string`
+      );
+    }
+  }
+}
+
 for (const n of notes) console.log(`  提示：${n}`);
 
 if (problems.length > 0) {
