@@ -18,15 +18,23 @@
   by the value schema DSL`。因为这个插件在 profile 里是 `required: true`，
   一处 schema 不合规就升级成 `StartupError: 1 required plugin did not activate`，
   整个应用起不来。
-  DSL 里正确的写法是**只在属性上标 `required: true`**，编译时会自动汇总成
-  required 列表（`tools` 注册工具时即完成编译）。
+  DSL 里正确的做法是**输出 schema 完全不标必填**——两种写法互斥且都会被拒：
 
   ```js
-  // 错：顶层 required 数组
-  schema: { type: "object", required: ["ok"], properties: { ... } }
-  // 对：属性上标 true
+  // 错 1：顶层 required 数组 → valueSchemaSpecToJsonSchema 抛
+  //   schema.required is not supported by the value schema DSL
+  schema: { type: "object", required: ["ok"], properties: { ok: { type: "boolean" } } }
+
+  // 错 2：属性级 required: true → tools.register 的 assertSupportedJsonSchema 抛
+  //   schema.properties.ok.required is not supported on type "boolean"
   schema: { type: "object", properties: { ok: { type: "boolean", required: true } } }
+
+  // 对：输出 schema 里不出现 required
+  schema: { type: "object", additionalProperties: false, properties: { ok: { type: "boolean" } } }
   ```
+
+  注意这条限制**只针对 `output.schema`**；`parameters` 里的属性级 `required: true`
+  是合法且必要的写法，两者不要混为一谈。
 
 ### 新增
 

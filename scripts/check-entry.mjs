@@ -104,16 +104,50 @@ if (accessed.size > 0 && !injectMatch) {
   notes.push("入口没有 export const inject，但用到了 ctx 服务：" + [...accessed].join("、"));
 }
 
-// ---- 5. 工具 schema 不能用顶层 required 数组 ----
+// ---- 5. output.schema 里不能出现 required ----
+// 两种写法都会被宿主拒，且都表现成「装上后 DSH 起不来」：
+//   顶层 required 数组 → valueSchemaSpecToJsonSchema 抛 schema.required is not supported
+//   属性级 required: true → tools.register 的 assertSupportedJsonSchema 抛 not supported on type
+// 注意：这条只约束 output.schema；parameters 里的 required: true 是合法写法。
 const REQUIRED_ARRAY = /^\s*required\s*:\s*\[/;
 for (const file of sourceFiles) {
   const text = await readFile(path.join(root, "lib", file), "utf8");
-  text.split(/\r?\n/).forEach((line, i) => {
+  const lines = text.split(/\r?\n/);
+
+  lines.forEach((line, i) => {
     if (REQUIRED_ARRAY.test(line)) {
       problems.push(
         `lib/${file}:${i + 1} 用了 required 数组写法 ` +
-        `—— DSH 的 value schema DSL 只接受属性级 \`required: true\`，` +
-        `数组写法会在加载时抛 JsonSchemaError，让宿主启动失败`
+        `—— 会抛 JsonSchemaError（schema.required is not supported by the value schema DSL），让宿主启动失败`
+      );
+    }
+  });
+
+  const outIdx = text.search(/\boutput\s*:\s*\{/);
+  if (outIdx < 0) continue;
+
+  const start = text.indexOf("{", outIdx);
+  let depth = 0;
+  let end = -1;
+  for (let i = start; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) { end = i; break; }
+    }
+  }
+  if (end <= start) continue;
+
+  const firstLine = text.slice(0, start).split(/\r?\n/).length;
+  text.slice(start, end + 1).split(/\r?\n/).forEach((line, i) => {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("//")) return;
+    if (/\brequired\b/.test(trimmed)) {
+      problems.push(
+        `lib/${file}:${firstLine + i} output 里出现了 required（${trimmed}）` +
+        `—— 输出 schema 不能标必填：顶层数组会被 DSL 拒，属性级 true 会被注册期校验拒，` +
+        `两种都会让宿主启动失败`
       );
     }
   });
