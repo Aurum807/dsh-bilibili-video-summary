@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 // 静态检查插件入口。不需要安装依赖、不联网，所以在任何机器和 CI 上都能跑。
 //
-// 检查三件事，每一件对应一种"装上了却不工作"的真实故障：
+// 检查四件事，每一件对应一种"装上了却不工作"的真实故障：
 //   1. 入口导出 name 与 apply(ctx) —— 宿主靠这两个加载插件
 //   2. 代码里 import 的 @deepseek-ai/* 都写进了 peerDependencies
 //      （漏声明 → 在别人机器上运行时报模块找不到）
 //   3. cordis.patch.yml 里的挂载名与 package.json 的 name 一致
 //      （不一致 → 安装成功但插件不生效，且很难查）
+//   4. apply 里用到的 ctx 服务都在 export const inject 里声明了
+//      （漏声明 → 宿主启动阶段直接抛 `cannot get property "x" without inject`，
+//       插件整个加载失败，用户看到的是「DSH 起不来」）
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -62,6 +65,41 @@ if (patchRel) {
   }
 }
 
+// ---- 4. ctx 服务必须写进 inject ----
+// cordis 访问未注入的服务属性会抛错，错误发生在启动阶段，整个插件加载失败。
+// 这里把 `ctx.xxx` 里的 xxx 全找出来，去掉 cordis 自带的基础成员，其余都要求出现在 inject。
+const CORDIS_BASE_MEMBERS = new Set([
+  "on", "off", "once", "emit", "parallel", "serial", "bail",
+  "plugin", "inject", "effect", "dispose", "logger",
+  "get", "set", "provide", "accessor", "extend", "isolate",
+  "scope", "root", "fiber", "registry", "reflect", "lifecycle"
+]);
+
+const injectMatch = /export\s+const\s+inject\s*=\s*\[([^\]]*)\]/.exec(entry);
+const injected = new Set(
+  (injectMatch?.[1] ?? "")
+    .split(",")
+    .map((s) => s.trim().replace(/^["']|["']$/g, ""))
+    .filter(Boolean)
+);
+
+const accessed = new Set();
+for (const m of entry.matchAll(/\bctx\.([A-Za-z_$][\w$]*)/g)) {
+  if (!CORDIS_BASE_MEMBERS.has(m[1])) accessed.add(m[1]);
+}
+
+for (const svc of accessed) {
+  if (!injected.has(svc)) {
+    problems.push(
+      `${entryRel} 里用到了 ctx.${svc}，但 export const inject 没声明它 ` +
+      `—— 宿主启动时会抛 "cannot get property \\"${svc}\\" without inject"，插件加载失败`
+    );
+  }
+}
+if (accessed.size > 0 && !injectMatch) {
+  notes.push("入口没有 export const inject，但用到了 ctx 服务：" + [...accessed].join("、"));
+}
+
 for (const n of notes) console.log(`  提示：${n}`);
 
 if (problems.length > 0) {
@@ -73,4 +111,5 @@ if (problems.length > 0) {
 console.log(`入口检查通过：${pkg.name}`);
 console.log(`  入口文件   = ${entryRel}（已导出 name 与 apply）`);
 console.log(`  使用的官方包 = ${[...used].sort().join("、") || "（无）"}`);
+console.log(`  ctx 服务   = ${[...accessed].sort().join("、") || "（无）"} → inject = [${[...injected].sort().join("、")}]`);
 console.log(`  patch 挂载名 = ${pkg.name}`);

@@ -7,6 +7,27 @@
 
 ## [未发布]
 
+## [0.2.2] - 2026-11-03
+
+### 修复
+
+- **装了本插件会让 DSH 启动失败**：`apply(ctx)` 里直接访问 `ctx.tools` 与 `ctx.skills`，
+  却没有导出 `inject`。cordis 对未注入的服务属性会抛
+  `cannot get property "tools" without inject`，而这个异常发生在宿主启动阶段，
+  用户看到的现象就是「DSH 起不来」。
+  现在入口导出 `export const inject = ["tools", "skills"]`。
+
+### 新增
+
+- `scripts/check-entry.mjs` 增加第 4 条静态检查：`apply` 里出现的 `ctx.<服务>`
+  必须全部写进 `export const inject`，否则检查失败、CI 拦下。
+  这类「装上后让宿主起不来」的缺陷以后发不出去。
+
+### 说明
+
+- `0.2.1` 从未发布到 npm（当次发布因令牌失效失败），其文档修正已并入本版，
+  所以 npm 上会从 `0.2.0` 直接到 `0.2.2`。
+
 ## [0.2.1] - 2026-10-19
 
 ### 修复
