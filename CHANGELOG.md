@@ -7,26 +7,41 @@
 
 ## [未发布]
 
-## [0.2.2] - 2026-11-03
+## [0.3.0] - 2026-11-03
 
 ### 修复
 
-- **装了本插件会让 DSH 启动失败**：`apply(ctx)` 里直接访问 `ctx.tools` 与 `ctx.skills`，
-  却没有导出 `inject`。cordis 对未注入的服务属性会抛
-  `cannot get property "tools" without inject`，而这个异常发生在宿主启动阶段，
-  用户看到的现象就是「DSH 起不来」。
-  现在入口导出 `export const inject = ["tools", "skills"]`。
+- **装上本插件会让 DSH 起不来**（严重，影响所有 0.2.0 用户）：
+  `apply(ctx)` 里直接访问 `ctx.tools` 与 `ctx.skills`，却没有导出 `inject`。
+  cordis 的上下文代理对未注入的服务属性会抛
+  `cannot get property "tools" without inject`，而这个异常发生在**宿主启动阶段**，
+  用户看到的现象就是「DSH 启动失败」，而不是「某个插件不工作」。
+  现在入口导出：
+
+  ```js
+  export const inject = ["tools", "skills"];
+  ```
 
 ### 新增
 
-- `scripts/check-entry.mjs` 增加第 4 条静态检查：`apply` 里出现的 `ctx.<服务>`
-  必须全部写进 `export const inject`，否则检查失败、CI 拦下。
-  这类「装上后让宿主起不来」的缺陷以后发不出去。
+- `scripts/check-entry.mjs` 增加第 4 条静态检查：把 `apply` 里出现的所有
+  `ctx.<服务>` 找出来，逐个要求出现在 `export const inject` 里，缺一个就失败。
+  同时校验 `cordis.patch.yml` 的挂载名、`@deepseek-ai/*` 的 peerDependencies 对齐。
+  这类「装上后让宿主起不来」的缺陷以后过不了 CI。
+
+### 包含之前未发布的内容
+
+- `0.2.1` 的文档修正：README 的转写说明改成三级回退
+  （站方字幕 → 本机 faster-whisper → 自定义命令），
+  删掉不存在的 `python -m faster_whisper_cli` 示例，依赖表补 `faster-whisper`（可选）；
+  `.gitignore` 补 `__pycache__/`、`*.pyc`。
 
 ### 说明
 
-- `0.2.1` 从未发布到 npm（当次发布因令牌失效失败），其文档修正已并入本版，
-  所以 npm 上会从 `0.2.0` 直接到 `0.2.2`。
+- npm 上 `0.2.1` 与 `0.2.2` 都从未发布（当次发布因令牌失效失败），
+  内容已全部并入本版，所以版本号会从 `0.2.0` 直接跳到 `0.3.0`。
+- 已安装 0.2.0 的用户必须升级：旧版会让 DSH 启动失败，
+  升级前可先把 profile `dsh.profile.bundles` 里的条目移除，让 DSH 先能启动。
 
 ## [0.2.1] - 2026-10-19
 

@@ -140,6 +140,7 @@ VIDEOSUM_PYLIBS=D:\path\to\dir-containing-yt_dlp
 
 | 现象 | 原因 | 处理 |
 | --- | --- | --- |
+| **DSH 起不来**，日志里有 `cannot get property "tools" without inject` | 装的是 0.2.0，它没导出 `inject`，cordis 在启动阶段就抛错 | 升级到 **0.3.0 及以上**；升级前先把 profile `dsh.profile.bundles` 里的条目删掉，让 DSH 能启动 |
 | `No module named yt_dlp` | yt-dlp 以 Python 模块形式存在，但不在 `PYTHONPATH` 里 | 设 `VIDEOSUM_PYLIBS` 指向含 `yt_dlp` 的目录 |
 | `HTTP Error 412` | 没有 cookies，B 站拒绝 | 放好 `cookies/bilibili.txt` |
 | `HTTP Error 567 Unknown Status` | 媒体下载走了**连不上 B 站 CDN 的本地代理** | 见下 |
