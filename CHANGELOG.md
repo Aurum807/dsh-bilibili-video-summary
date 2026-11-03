@@ -7,6 +7,39 @@
 
 ## [未发布]
 
+## [0.3.1] - 2026-11-03
+
+### 修复
+
+- **0.3.0 装上后 DSH 仍然启动失败**（第二层根因，比 0.3.0 的 `inject` 更隐蔽）：
+  工具定义的 `output.schema` 里写了顶层 `required: ["ok"]` 数组，而 DSH 的
+  value schema DSL **不接受**这种写法，加载时会抛
+  `JsonSchemaError: unsupported JSON schema: schema.required is not supported
+  by the value schema DSL`。因为这个插件在 profile 里是 `required: true`，
+  一处 schema 不合规就升级成 `StartupError: 1 required plugin did not activate`，
+  整个应用起不来。
+  DSL 里正确的写法是**只在属性上标 `required: true`**，编译时会自动汇总成
+  required 列表（`tools` 注册工具时即完成编译）。
+
+  ```js
+  // 错：顶层 required 数组
+  schema: { type: "object", required: ["ok"], properties: { ... } }
+  // 对：属性上标 true
+  schema: { type: "object", properties: { ok: { type: "boolean", required: true } } }
+  ```
+
+### 新增
+
+- `scripts/check-entry.mjs` 增加第 5 条静态检查：`lib/*.js` 里出现
+  `required: [...]` 数组写法即失败，提示改成属性级 `required: true`。
+  这条与 0.3.0 的 `inject` 检查合起来，覆盖「装上后让宿主起不来」的两类缺陷。
+
+### 修复（工具返回值）
+
+- `video_material` 的返回值改为先过 `compact()` 去掉值为 `undefined` 的键。
+  DSH 在工具返回后会做一次严格 JSON 快照再按 `output.schema` 校验，
+  而 `additionalProperties: false` 的封闭对象不该出现「有键无值」的属性。
+
 ## [0.3.0] - 2026-11-03
 
 ### 修复

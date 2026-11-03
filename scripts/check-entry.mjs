@@ -10,6 +10,10 @@
 //   4. apply 里用到的 ctx 服务都在 export const inject 里声明了
 //      （漏声明 → 宿主启动阶段直接抛 `cannot get property "x" without inject`，
 //       插件整个加载失败，用户看到的是「DSH 起不来」）
+//   5. 工具 schema 没有用 `required: [...]` 数组写法
+//      （DSH 的 value schema DSL 只认属性级 `required: true`，数组写法会抛
+//       `JsonSchemaError: unsupported JSON schema: schema.required is not supported
+//       by the value schema DSL`，同样表现成「DSH 起不来」）
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -98,6 +102,21 @@ for (const svc of accessed) {
 }
 if (accessed.size > 0 && !injectMatch) {
   notes.push("入口没有 export const inject，但用到了 ctx 服务：" + [...accessed].join("、"));
+}
+
+// ---- 5. 工具 schema 不能用顶层 required 数组 ----
+const REQUIRED_ARRAY = /^\s*required\s*:\s*\[/;
+for (const file of sourceFiles) {
+  const text = await readFile(path.join(root, "lib", file), "utf8");
+  text.split(/\r?\n/).forEach((line, i) => {
+    if (REQUIRED_ARRAY.test(line)) {
+      problems.push(
+        `lib/${file}:${i + 1} 用了 required 数组写法 ` +
+        `—— DSH 的 value schema DSL 只接受属性级 \`required: true\`，` +
+        `数组写法会在加载时抛 JsonSchemaError，让宿主启动失败`
+      );
+    }
+  });
 }
 
 for (const n of notes) console.log(`  提示：${n}`);
