@@ -7,6 +7,26 @@
 
 ## [未发布]
 
+## [0.3.4] - 2026-11-04
+
+### 新增
+
+- **`video_material` 增加 `action: "doctor"`**：不需要 url，返回 yt-dlp / ffmpeg / ffprobe / ASR
+  的实际路径与版本，缺什么就把安装命令一并给出来。
+  动机来自真实反馈：插件在别人机器上**能装、能加载、工具也注册了**，但一跑就报「缺少外部工具」——
+  用户看到的是「装了却没用」。先自检再承诺总结，比跑到一半失败好得多。
+- 技能说明里加了第 0 步：第一次用、或上一步报过缺工具时，先跑 `action=doctor`。
+
+### 改进
+
+- **缺工具时的报错改成按平台给命令**，可以直接复制：
+  - Windows：`winget install yt-dlp.ytdlp` / `winget install Gyan.FFmpeg`
+  - macOS：`brew install yt-dlp` / `brew install ffmpeg`
+  - Linux：`sudo apt install yt-dlp ffmpeg`（附 dnf / pacman 写法）
+  - 三条都补了「或用 `VIDEOSUM_YTDLP` / `VIDEOSUM_FFMPEG` / `VIDEOSUM_FFPROBE` 指向可执行文件」的兜底
+- `parameters.url` 改为可选（只有 `doctor` 不需要），缺 url 时由代码给出明确提示，而不是靠 schema 报错。
+- `doctor()` 抽成 `video-material.mjs` 的导出函数，CLI 的 `doctor` 子命令与工具共用同一份结果。
+
 ## [0.3.3] - 2026-11-03
 
 ### 修复

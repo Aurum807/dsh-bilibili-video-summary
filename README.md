@@ -48,6 +48,24 @@ dsh plugin --profile web add link:/绝对路径/dsh-bilibili-video-summary
 | [ffmpeg](https://ffmpeg.org/)（含 ffprobe） | 抽帧、分离音轨 | 只能拿转写稿，没有画面 |
 | [faster-whisper](https://github.com/SYSTRAN/faster-whisper)（可选） | 没有站方字幕时做语音转写 | 退回到「只有画面素材」 |
 
+**装完插件先自检一次**，别等点了总结才发现缺东西：
+
+```bash
+node lib/video-material.mjs doctor      # 命令行
+# 或者在对话里让模型调用：video_material({ action: "doctor" })
+```
+
+缺什么它会直接把对应平台的安装命令列出来。三个平台的常用写法：
+
+| 平台 | 安装 |
+| --- | --- |
+| Windows | `winget install yt-dlp.ytdlp` 和 `winget install Gyan.FFmpeg` |
+| macOS | `brew install yt-dlp ffmpeg` |
+| Debian/Ubuntu | `sudo apt install yt-dlp ffmpeg` |
+
+不想装进系统也行：把可执行文件放在任意位置，用 `VIDEOSUM_YTDLP`、`VIDEOSUM_FFMPEG`、
+`VIDEOSUM_FFPROBE` 指向它们即可。
+
 转写引擎按三级回退自动找，**默认不需要你配置**：
 
 1. **站方字幕** —— UP 主自己上传的字幕，最准也最快，有就直接用。
@@ -91,7 +109,8 @@ VIDEOSUM_PYLIBS=D:\path\to\dir-containing-yt_dlp
 
 大多数时候不用管——贴链接就行。也可以显式用它：
 
-- **模型侧工具**：`video_material({ action: "probe", url })` 先看是不是目标视频；
+- **模型侧工具**：`video_material({ action: "doctor" })` 先自检依赖；
+  `video_material({ action: "probe", url })` 看是不是目标视频；
   `video_material({ action: "material", url, every: 3 })` 准备全部素材。
 - **命令行**（不经过模型，手动跑素材流水线）：
 
